@@ -25,6 +25,7 @@ import android.os.IBinder
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -50,6 +51,7 @@ class ReelsOverlayCaptureService : Service() {
     private var overlayView: View? = null
     private var subtitleView: TextView? = null
     private var statusView: TextView? = null
+    private var overlayParams: WindowManager.LayoutParams? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -113,7 +115,7 @@ class ReelsOverlayCaptureService : Service() {
         mediaProjection!!.registerCallback(projectionCallback!!, captureHandler)
 
         createVirtualDisplay()
-        updateStatus("Ready. Open Instagram, then tap CAP.")
+        updateStatus("Drag subtitle to move. Tap STOP to close.")
     }
 
     private fun createVirtualDisplay() {
@@ -142,27 +144,23 @@ class ReelsOverlayCaptureService : Service() {
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(18, 14, 18, 14)
-            setBackgroundColor(0x66000000)
+            setPadding(28, 18, 28, 18)
+            setBackgroundColor(0xB3000000.toInt())
         }
 
         subtitleView = TextView(this).apply {
-            text = "Subtitle overlay preview"
+            text = "번역 자막 테스트"
             setTextColor(0xFFFFFFFF.toInt())
-            textSize = 18f
+            textSize = 22f
             gravity = Gravity.CENTER
+            includeFontPadding = true
         }
 
         statusView = TextView(this).apply {
-            text = "Starting..."
+            text = "Drag to move"
             setTextColor(0xFFE6E6E6.toInt())
             textSize = 12f
             gravity = Gravity.CENTER
-        }
-
-        val captureButton = Button(this).apply {
-            text = "CAP"
-            setOnClickListener { captureOneFrame() }
         }
 
         val stopButton = Button(this).apply {
@@ -172,11 +170,11 @@ class ReelsOverlayCaptureService : Service() {
 
         container.addView(subtitleView)
         container.addView(statusView)
-        container.addView(captureButton)
         container.addView(stopButton)
+        container.setOnTouchListener(OverlayDragTouchListener())
         overlayView = container
 
-        val params = WindowManager.LayoutParams(
+        overlayParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -185,11 +183,39 @@ class ReelsOverlayCaptureService : Service() {
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            y = 120
+            gravity = Gravity.TOP or Gravity.START
+            x = 80
+            y = resources.displayMetrics.heightPixels - 420
         }
 
-        windowManager?.addView(overlayView, params)
+        windowManager?.addView(overlayView, overlayParams)
+    }
+
+    private inner class OverlayDragTouchListener : View.OnTouchListener {
+        private var initialX = 0
+        private var initialY = 0
+        private var initialTouchX = 0f
+        private var initialTouchY = 0f
+
+        override fun onTouch(view: View, event: MotionEvent): Boolean {
+            val params = overlayParams ?: return false
+            return when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialX = params.x
+                    initialY = params.y
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    params.x = initialX + (event.rawX - initialTouchX).toInt()
+                    params.y = initialY + (event.rawY - initialTouchY).toInt()
+                    windowManager?.updateViewLayout(view, params)
+                    true
+                }
+                else -> false
+            }
+        }
     }
 
     private fun captureOneFrame() {
@@ -272,6 +298,7 @@ class ReelsOverlayCaptureService : Service() {
         overlayView = null
         subtitleView = null
         statusView = null
+        overlayParams = null
         windowManager = null
     }
 

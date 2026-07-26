@@ -35,7 +35,7 @@ import com.example.myapplication.ocr.TitleDecision
 import com.example.myapplication.storage.ResultArtifactSaver
 import com.example.myapplication.translation.CropTranslationState
 import com.example.myapplication.translation.JapaneseKoreanTranslator
-import com.example.myapplication.ui.PermissionScreen
+import com.example.myapplication.ui.ReleaseOverlayScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import org.opencv.android.OpenCVLoader
 
@@ -102,26 +102,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MyApplicationTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    PermissionScreen(
-                        canDrawOverlays = canDrawOverlays,
-                        screenCaptureGranted = screenCaptureGranted,
-                        statusMessage = statusMessage,
-                        opencvReady = opencvReady,
-                        detectionResult = detectionResult,
-                        detectionMessage = detectionMessage,
-                        detectionSettings = detectionSettings,
-                        cropOcrStates = cropOcrStates,
-                        cropTranslationStates = cropTranslationStates,
-                        saveResultMessage = saveResultMessage,
+                ReleaseOverlayScreen(
+                    canDrawOverlays = canDrawOverlays,
+                    screenCaptureGranted = screenCaptureGranted,
+                    statusMessage = statusMessage,
                         onRequestOverlayPermission = ::requestOverlayPermission,
-                        onRequestScreenCapturePermission = ::requestScreenCapturePermission,
-                        onLoadScreenshot = ::loadScreenshot,
-                        onSaveResultArtifacts = ::saveResultArtifacts,
-                        onDetectionSettingsChanged = ::updateDetectionSettings,
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                    onStartFloatingSubtitle = ::requestScreenCapturePermission,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }
