@@ -30,6 +30,8 @@ import com.example.myapplication.detection.YellowDetectionSettings
 import com.example.myapplication.media.ReelsOverlayCaptureService
 import com.example.myapplication.ocr.CropOcrState
 import com.example.myapplication.ocr.JapaneseOcrProcessor
+import com.example.myapplication.ocr.TitleChangeDetector
+import com.example.myapplication.ocr.TitleDecision
 import com.example.myapplication.ui.PermissionScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import org.opencv.android.OpenCVLoader
@@ -47,6 +49,7 @@ class MainActivity : ComponentActivity() {
     private var selectedBitmap by mutableStateOf<Bitmap?>(null)
     private var detectionSettings by mutableStateOf(YellowDetectionSettings())
     private var cropOcrStates by mutableStateOf<Map<Int, CropOcrState>>(emptyMap())
+    private var previousNormalizedTitle: String? = null
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -206,8 +209,27 @@ class MainActivity : ComponentActivity() {
             ocrProcessor.recognize(
                 bitmap = crop.ocrBitmap,
                 onSuccess = { text ->
+                    val comparison = TitleChangeDetector.compare(
+                        previousNormalizedText = previousNormalizedTitle,
+                        currentText = text
+                    )
+                    if (comparison.decision == TitleDecision.FirstTitle ||
+                        comparison.decision == TitleDecision.NewTitle
+                    ) {
+                        previousNormalizedTitle = comparison.normalizedText
+                    }
+
                     cropOcrStates = cropOcrStates + (
-                        index to if (text.isBlank()) CropOcrState.Empty else CropOcrState(text)
+                        index to if (text.isBlank()) {
+                            CropOcrState.Empty
+                        } else {
+                            CropOcrState(
+                                text = text,
+                                normalizedText = comparison.normalizedText,
+                                similarityToPrevious = comparison.similarityToPrevious,
+                                titleDecision = comparison.decision
+                            )
+                        }
                         )
                 },
                 onFailure = { error ->

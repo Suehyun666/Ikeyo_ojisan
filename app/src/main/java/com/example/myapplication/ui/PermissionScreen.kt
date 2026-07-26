@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.detection.DetectionResult
 import com.example.myapplication.detection.YellowDetectionSettings
 import com.example.myapplication.ocr.CropOcrState
+import com.example.myapplication.ocr.TitleDecision
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 @Composable
@@ -119,6 +120,15 @@ private fun DetectionImages(
             val ocrState = cropOcrStates[index]
             Text(text = "OCR:")
             Text(text = ocrState?.text ?: "OCR pending...")
+            ocrState?.let { state ->
+                if (state.normalizedText.isNotBlank()) {
+                    Text(text = "Normalized: ${state.normalizedText}")
+                }
+                Text(text = "Decision: ${state.titleDecision.label()}")
+                state.similarityToPrevious?.let { similarity ->
+                    Text(text = "Similarity: ${"%.3f".format(similarity)}")
+                }
+            }
             ocrState?.errorMessage?.let { message ->
                 Text(text = "Error: $message")
             }
@@ -139,6 +149,15 @@ private fun DetectionImages(
         modifier = Modifier.fillMaxWidth(),
         contentScale = ContentScale.FillWidth
     )
+}
+
+private fun TitleDecision.label(): String {
+    return when (this) {
+        TitleDecision.Unknown -> "unknown"
+        TitleDecision.FirstTitle -> "first title"
+        TitleDecision.SameTitle -> "same title"
+        TitleDecision.NewTitle -> "new title"
+    }
 }
 
 @Composable
