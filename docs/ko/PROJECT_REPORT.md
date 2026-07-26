@@ -2,19 +2,19 @@
 
 ## 1. 프로젝트 개요
 
-이 프로젝트는 인스타그램 릴스 화면 위에 표시되는 일본어 제목 자막을 자동으로 감지하고, OCR로 원문을 추출한 뒤 한국어 번역 결과를 오버레이로 보여주기 위한 Android 프로토타입이다.
+이 프로젝트는 인스타그램 릴스 화면 위에 표시되는 일본어 제목 자막을 자동으로 감지하고, OCR로 원문을 추출한 뒤 한국어 번역 결과를 드래그 가능한 플로팅 오버레이로 보여주기 위한 Android 프로토타입이다.
 
-현재 구현은 실시간 적용 전 검증 단계에 초점을 둔다. 정지 스크린샷을 대상으로 다음 파이프라인을 검증하고 있다.
+현재 release 구현은 `MediaProjection` 프레임에서 감지, OCR, 번역 파이프라인을 실행하고, 안정적으로 새 제목이 감지되었을 때만 투명 오버레이 자막을 갱신한다.
 
 ```text
-스크린샷 로드
+MediaProjection 프레임 캡처
 -> 노란 제목 영역 검출
 -> 검출 영역 crop
 -> 일본어 OCR
 -> OCR 텍스트 정규화
 -> 이전 제목과 유사도 비교
 -> 새 제목일 때만 번역
--> 번역 결과 표시
+-> 플로팅 오버레이 자막 갱신
 ```
 
 ## 2. 핵심 파이프라인
@@ -22,7 +22,7 @@
 ### 2.1 화면 입력
 
 - 정지 이미지 검증: 갤러리에서 인스타 릴스 스크린샷 선택
-- 실시간 목표: `MediaProjection`으로 주기적 화면 프레임 캡처
+- 실시간 오버레이: `MediaProjection`으로 주기적 화면 프레임 캡처
 
 ### 2.2 노란 제목 영역 검출
 
@@ -306,16 +306,23 @@ Translation:
 
 ## 9. 현재 상태
 
-현재 정지 이미지 기준 파이프라인은 동작한다.
+현재 release 브랜치 기준으로 실시간 오버레이 파이프라인이 동작한다.
 
 ```text
-Load screenshot
+MediaProjection frame
 -> yellow ROI detection
 -> crop
 -> Japanese OCR
--> normalized OCR copy
+-> normalized OCR
 -> title similarity decision
 -> Papago translation
+-> floating overlay subtitle update
 ```
 
-다음 단계는 같은 파이프라인을 `MediaProjection` 프레임에 주기적으로 적용하고, 새 제목이 감지될 때만 오버레이 자막을 갱신하는 것이다.
+정지 이미지 검증 화면은 검출 결과, OCR crop, OCR 원문, 정규화 텍스트, 유사도, 번역 결과를 확인하는 용도로 유지한다.
+
+## 10. 데모 영상
+
+실제 인스타 릴스 위에서 번역 자막 오버레이가 동작하는 압축 데모 영상은 다음 경로에 저장했다.
+
+- [docs/assets/video/demo.mp4](../assets/video/demo.mp4)

@@ -1,8 +1,8 @@
 # Reels Overlay Translator
 
-Android prototype for detecting Japanese caption title bands in Instagram Reels screenshots, extracting the detected region, running Japanese OCR, deciding whether the title changed, and translating new titles into Korean.
+Android prototype for detecting Japanese caption title bands in Instagram Reels, extracting the detected region, running Japanese OCR, deciding whether the title changed, and translating new titles into Korean as a draggable floating subtitle overlay.
 
-The current app is still a validation tool. It focuses on proving the image/OCR/translation pipeline with static screenshots before moving the same pipeline into the realtime `MediaProjection` overlay loop.
+The current release path runs the detection/OCR/translation pipeline from `MediaProjection` frames and updates a transparent Android system overlay only when a stable new title is detected.
 
 ## Pipeline
 
@@ -146,19 +146,26 @@ Install on the connected Android device:
 
 ## Current Status
 
-The static screenshot validation path is working:
+The realtime overlay path is working:
 
 ```text
-Load screenshot
+Capture MediaProjection frame
 -> detect yellow title band
 -> crop ROI
 -> OCR Japanese text
 -> normalize/copy text
 -> detect whether title changed
 -> translate new title with Papago
+-> update draggable floating subtitle overlay
 ```
 
-Next major step is moving the same pipeline into the realtime `MediaProjection` loop and updating the overlay subtitle only when a new title is detected.
+The static screenshot validation path is still available for checking detection, crop quality, OCR input, normalized text, similarity, and translation results.
+
+## Demo Video
+
+A compressed demo recording is included here:
+
+- [docs/assets/video/demo.mp4](docs/assets/video/demo.mp4)
 
 ## Validation Results
 
