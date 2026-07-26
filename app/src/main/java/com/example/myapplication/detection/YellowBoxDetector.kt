@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.myapplication.detection
 
 import android.graphics.Bitmap
 import org.opencv.android.Utils
@@ -9,22 +9,6 @@ import org.opencv.core.Rect
 import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
-
-data class DetectionResult(
-    val boxes: List<Rect>,
-    val debugBitmap: Bitmap,
-    val maskBitmap: Bitmap
-)
-
-data class YellowDetectionSettings(
-    val lowerHue: Double = 23.6,
-    val upperHue: Double = 48.8,
-    val lowerSaturation: Double = 55.4,
-    val lowerValue: Double = 103.1,
-    val minWidth: Int = 233,
-    val minHeight: Int = 50,
-    val minAspectRatio: Double = 1.5
-)
 
 object YellowBoxDetector {
     fun detectYellowBoxes(
@@ -70,6 +54,7 @@ object YellowBoxDetector {
                     rect.height >= settings.minHeight &&
                     rect.width.toDouble() / rect.height >= settings.minAspectRatio
             }
+            .sortedByDescending { it.width * it.height }
 
         val debugMat = rgba.clone()
         boxes.forEach { rect ->
@@ -96,6 +81,12 @@ object YellowBoxDetector {
         )
         Utils.matToBitmap(mask, maskBitmap)
 
+        val crops = boxes.mapNotNull { rect ->
+            bitmap.cropSafely(rect)?.let { croppedBitmap ->
+                YellowBoxCrop(rect = rect, bitmap = croppedBitmap)
+            }
+        }
+
         rgba.release()
         rgb.release()
         hsv.release()
@@ -106,9 +97,24 @@ object YellowBoxDetector {
         contours.forEach { it.release() }
 
         return DetectionResult(
-            boxes = boxes,
+            crops = crops,
             debugBitmap = debugBitmap,
             maskBitmap = maskBitmap
         )
+    }
+
+    private fun Bitmap.cropSafely(rect: Rect): Bitmap? {
+        val left = rect.x.coerceIn(0, width - 1)
+        val top = rect.y.coerceIn(0, height - 1)
+        val right = (rect.x + rect.width).coerceIn(left + 1, width)
+        val bottom = (rect.y + rect.height).coerceIn(top + 1, height)
+        val cropWidth = right - left
+        val cropHeight = bottom - top
+
+        return if (cropWidth > 0 && cropHeight > 0) {
+            Bitmap.createBitmap(this, left, top, cropWidth, cropHeight)
+        } else {
+            null
+        }
     }
 }

@@ -30,7 +30,7 @@
         </activity>
 
         <service
-            android:name=".ReelsOverlayCaptureService"
+            android:name=".media.ReelsOverlayCaptureService"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
     </application>
