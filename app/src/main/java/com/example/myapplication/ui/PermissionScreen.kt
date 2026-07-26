@@ -13,9 +13,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.detection.DetectionResult
@@ -42,6 +45,8 @@ fun PermissionScreen(
     onDetectionSettingsChanged: (YellowDetectionSettings) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val clipboardManager = LocalClipboardManager.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -88,7 +93,8 @@ fun PermissionScreen(
             DetectionImages(
                 result = result,
                 cropOcrStates = cropOcrStates,
-                cropTranslationStates = cropTranslationStates
+                cropTranslationStates = cropTranslationStates,
+                clipboardManager = clipboardManager
             )
         }
     }
@@ -98,7 +104,8 @@ fun PermissionScreen(
 private fun DetectionImages(
     result: DetectionResult,
     cropOcrStates: Map<Int, CropOcrState>,
-    cropTranslationStates: Map<Int, CropTranslationState>
+    cropTranslationStates: Map<Int, CropTranslationState>,
+    clipboardManager: ClipboardManager
 ) {
     Text(text = "Detected area crops")
     if (result.crops.isEmpty()) {
@@ -127,6 +134,14 @@ private fun DetectionImages(
             ocrState?.let { state ->
                 if (state.normalizedText.isNotBlank()) {
                     Text(text = "Normalized: ${state.normalizedText}")
+                    Button(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(state.normalizedText))
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Copy normalized text")
+                    }
                 }
                 Text(text = "Decision: ${state.titleDecision.label()}")
                 state.similarityToPrevious?.let { similarity ->
