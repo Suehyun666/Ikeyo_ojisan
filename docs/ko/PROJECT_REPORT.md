@@ -323,6 +323,10 @@ MediaProjection frame
 
 ## 10. 데모 영상
 
-실제 인스타 릴스 위에서 번역 자막 오버레이가 동작하는 압축 데모 영상은 다음 경로에 저장했다.
+아래 GIF는 실제 인스타 릴스 위에서 번역 자막 오버레이가 동작하는 모습을 보여준다.
+
+![실시간 오버레이 데모](../assets/video/demo.gif)
+
+압축 mp4 녹화본도 다음 경로에 저장했다.
 
 - [docs/assets/video/demo.mp4](../assets/video/demo.mp4)

@@ -163,7 +163,11 @@ The static screenshot validation path is still available for checking detection,
 
 ## Demo Video
 
-A compressed demo recording is included here:
+The demo GIF below shows the realtime subtitle overlay running on top of Instagram Reels:
+
+![Realtime overlay demo](docs/assets/video/demo.gif)
+
+A compressed mp4 recording is also included here:
 
 - [docs/assets/video/demo.mp4](docs/assets/video/demo.mp4)
 
