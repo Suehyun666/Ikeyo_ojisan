@@ -171,6 +171,14 @@ A compressed mp4 recording is also included here:
 
 - [docs/assets/video/demo.mp4](docs/assets/video/demo.mp4)
 
+## APK
+
+A locally signed release APK is available here:
+
+- [releases/Ikeyo_ojisan-v1.0.apk](releases/Ikeyo_ojisan-v1.0.apk)
+
+This APK is intended for direct device installation/testing, not Play Store distribution signing.
+
 ## Validation Results
 
 Three saved validation cases are included under [docs/assets/cases](docs/assets/cases).

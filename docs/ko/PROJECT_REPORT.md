@@ -330,3 +330,11 @@ MediaProjection frame
 압축 mp4 녹화본도 다음 경로에 저장했다.
 
 - [docs/assets/video/demo.mp4](../assets/video/demo.mp4)
+
+## 11. APK 배포 파일
+
+직접 설치 테스트용으로 로컬 서명된 release APK를 다음 경로에 저장했다.
+
+- [releases/Ikeyo_ojisan-v1.0.apk](../../releases/Ikeyo_ojisan-v1.0.apk)
+
+이 APK는 기기 직접 설치와 데모 테스트용이며, Play Store 배포용 정식 서명 APK는 아니다.
