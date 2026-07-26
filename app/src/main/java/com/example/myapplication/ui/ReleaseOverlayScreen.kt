@@ -22,6 +22,7 @@ fun ReleaseOverlayScreen(
     statusMessage: String,
     onRequestOverlayPermission: () -> Unit,
     onStartFloatingSubtitle: () -> Unit,
+    onStopFloatingSubtitle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
@@ -51,6 +52,12 @@ fun ReleaseOverlayScreen(
             ) {
                 Text(text = "Start floating subtitle")
             }
+            Button(
+                onClick = onStopFloatingSubtitle,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Stop floating subtitle")
+            }
         }
     }
 }
@@ -64,7 +71,8 @@ fun ReleaseOverlayScreenPreview() {
             screenCaptureGranted = false,
             statusMessage = "Ready.",
             onRequestOverlayPermission = {},
-            onStartFloatingSubtitle = {}
+            onStartFloatingSubtitle = {},
+            onStopFloatingSubtitle = {}
         )
     }
 }

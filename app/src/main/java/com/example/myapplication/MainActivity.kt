@@ -106,8 +106,9 @@ class MainActivity : ComponentActivity() {
                     canDrawOverlays = canDrawOverlays,
                     screenCaptureGranted = screenCaptureGranted,
                     statusMessage = statusMessage,
-                        onRequestOverlayPermission = ::requestOverlayPermission,
+                    onRequestOverlayPermission = ::requestOverlayPermission,
                     onStartFloatingSubtitle = ::requestScreenCapturePermission,
+                    onStopFloatingSubtitle = ::stopOverlayService,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -168,6 +169,14 @@ class MainActivity : ComponentActivity() {
             putExtra(ReelsOverlayCaptureService.EXTRA_RESULT_DATA, resultData)
         }
         ContextCompat.startForegroundService(this, intent)
+    }
+
+    private fun stopOverlayService() {
+        val intent = Intent(this, ReelsOverlayCaptureService::class.java).apply {
+            action = ReelsOverlayCaptureService.ACTION_STOP
+        }
+        startService(intent)
+        statusMessage = "Floating subtitle stopped."
     }
 
     private fun loadScreenshot() {

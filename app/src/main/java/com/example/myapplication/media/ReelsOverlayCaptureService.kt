@@ -24,13 +24,14 @@ import android.os.HandlerThread
 import android.os.IBinder
 import android.provider.MediaStore
 import android.provider.Settings
+import android.view.GestureDetector
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.example.myapplication.R
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -50,7 +51,6 @@ class ReelsOverlayCaptureService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
     private var subtitleView: TextView? = null
-    private var statusView: TextView? = null
     private var overlayParams: WindowManager.LayoutParams? = null
 
     override fun onCreate() {
@@ -144,34 +144,23 @@ class ReelsOverlayCaptureService : Service() {
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(28, 18, 28, 18)
-            setBackgroundColor(0xB3000000.toInt())
+            setPadding(24, 14, 24, 14)
+            background = getDrawable(R.drawable.subtitle_overlay_background)
         }
 
         subtitleView = TextView(this).apply {
             text = "번역 자막 테스트"
             setTextColor(0xFFFFFFFF.toInt())
-            textSize = 22f
+            setShadowLayer(5f, 0f, 2f, 0xCC000000.toInt())
+            maxWidth = (resources.displayMetrics.widthPixels * 0.88f).toInt()
+            maxLines = 3
+            textSize = 21f
             gravity = Gravity.CENTER
             includeFontPadding = true
         }
 
-        statusView = TextView(this).apply {
-            text = "Drag to move"
-            setTextColor(0xFFE6E6E6.toInt())
-            textSize = 12f
-            gravity = Gravity.CENTER
-        }
-
-        val stopButton = Button(this).apply {
-            text = "STOP"
-            setOnClickListener { stopSelf() }
-        }
-
         container.addView(subtitleView)
-        container.addView(statusView)
-        container.addView(stopButton)
-        container.setOnTouchListener(OverlayDragTouchListener())
+        container.setOnTouchListener(OverlayTouchListener())
         overlayView = container
 
         overlayParams = WindowManager.LayoutParams(
@@ -191,13 +180,22 @@ class ReelsOverlayCaptureService : Service() {
         windowManager?.addView(overlayView, overlayParams)
     }
 
-    private inner class OverlayDragTouchListener : View.OnTouchListener {
+    private inner class OverlayTouchListener : View.OnTouchListener {
         private var initialX = 0
         private var initialY = 0
         private var initialTouchX = 0f
         private var initialTouchY = 0f
+        private val gestureDetector = GestureDetector(
+            this@ReelsOverlayCaptureService,
+            object : GestureDetector.SimpleOnGestureListener() {
+                override fun onLongPress(event: MotionEvent) {
+                    stopSelf()
+                }
+            }
+        )
 
         override fun onTouch(view: View, event: MotionEvent): Boolean {
+            gestureDetector.onTouchEvent(event)
             val params = overlayParams ?: return false
             return when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -286,9 +284,7 @@ class ReelsOverlayCaptureService : Service() {
     }
 
     private fun updateStatus(message: String) {
-        mainHandler.post {
-            statusView?.text = message
-        }
+        // Status is kept in the notification/app screen for the release overlay.
     }
 
     private fun removeOverlay() {
@@ -297,7 +293,6 @@ class ReelsOverlayCaptureService : Service() {
         }
         overlayView = null
         subtitleView = null
-        statusView = null
         overlayParams = null
         windowManager = null
     }
