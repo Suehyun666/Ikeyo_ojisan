@@ -32,12 +32,15 @@ import com.example.myapplication.ocr.CropOcrState
 import com.example.myapplication.ocr.JapaneseOcrProcessor
 import com.example.myapplication.ocr.TitleChangeDetector
 import com.example.myapplication.ocr.TitleDecision
+import com.example.myapplication.translation.CropTranslationState
+import com.example.myapplication.translation.JapaneseKoreanTranslator
 import com.example.myapplication.ui.PermissionScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import org.opencv.android.OpenCVLoader
 
 class MainActivity : ComponentActivity() {
     private val ocrProcessor = JapaneseOcrProcessor()
+    private val translator = JapaneseKoreanTranslator()
 
     private var canDrawOverlays by mutableStateOf(false)
     private var screenCaptureGranted by mutableStateOf(false)
@@ -49,7 +52,9 @@ class MainActivity : ComponentActivity() {
     private var selectedBitmap by mutableStateOf<Bitmap?>(null)
     private var detectionSettings by mutableStateOf(YellowDetectionSettings())
     private var cropOcrStates by mutableStateOf<Map<Int, CropOcrState>>(emptyMap())
+    private var cropTranslationStates by mutableStateOf<Map<Int, CropTranslationState>>(emptyMap())
     private var previousNormalizedTitle: String? = null
+    private var previousTranslation: String? = null
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -104,6 +109,7 @@ class MainActivity : ComponentActivity() {
                         detectionMessage = detectionMessage,
                         detectionSettings = detectionSettings,
                         cropOcrStates = cropOcrStates,
+                        cropTranslationStates = cropTranslationStates,
                         onRequestOverlayPermission = ::requestOverlayPermission,
                         onRequestScreenCapturePermission = ::requestScreenCapturePermission,
                         onLoadScreenshot = ::loadScreenshot,
@@ -117,6 +123,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         ocrProcessor.close()
+        translator.close()
         super.onDestroy()
     }
 
@@ -203,6 +210,7 @@ class MainActivity : ComponentActivity() {
 
     private fun runOcrForCrops(result: DetectionResult) {
         cropOcrStates = result.crops.indices.associateWith { CropOcrState.Loading }
+        cropTranslationStates = emptyMap()
         if (result.crops.isEmpty()) return
 
         result.crops.forEachIndexed { index, crop ->
@@ -231,6 +239,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         )
+                    handleTranslation(index, text, comparison.decision)
                 },
                 onFailure = { error ->
                     cropOcrStates = cropOcrStates + (
@@ -242,6 +251,60 @@ class MainActivity : ComponentActivity() {
                 }
             )
         }
+    }
+
+    private fun handleTranslation(
+        index: Int,
+        sourceText: String,
+        decision: TitleDecision
+    ) {
+        when (decision) {
+            TitleDecision.FirstTitle,
+            TitleDecision.NewTitle -> translateNewTitle(index, sourceText)
+            TitleDecision.SameTitle -> {
+                val translation = previousTranslation
+                cropTranslationStates = cropTranslationStates + (
+                    index to if (translation.isNullOrBlank()) {
+                        CropTranslationState.Empty
+                    } else {
+                        CropTranslationState(
+                            text = translation,
+                            wasReused = true
+                        )
+                    }
+                    )
+            }
+            TitleDecision.Unknown -> {
+                cropTranslationStates = cropTranslationStates + (
+                    index to CropTranslationState.Empty
+                    )
+            }
+        }
+    }
+
+    private fun translateNewTitle(index: Int, sourceText: String) {
+        cropTranslationStates = cropTranslationStates + (index to CropTranslationState.Loading)
+        translator.translate(
+            text = sourceText,
+            onSuccess = { translatedText ->
+                previousTranslation = translatedText
+                cropTranslationStates = cropTranslationStates + (
+                    index to if (translatedText.isBlank()) {
+                        CropTranslationState.Empty
+                    } else {
+                        CropTranslationState(text = translatedText)
+                    }
+                    )
+            },
+            onFailure = { error ->
+                cropTranslationStates = cropTranslationStates + (
+                    index to CropTranslationState(
+                        text = "Translation failed",
+                        errorMessage = error.message
+                    )
+                    )
+            }
+        )
     }
 
     @Suppress("DEPRECATION")

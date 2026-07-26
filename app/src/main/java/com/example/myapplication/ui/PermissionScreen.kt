@@ -22,6 +22,7 @@ import com.example.myapplication.detection.DetectionResult
 import com.example.myapplication.detection.YellowDetectionSettings
 import com.example.myapplication.ocr.CropOcrState
 import com.example.myapplication.ocr.TitleDecision
+import com.example.myapplication.translation.CropTranslationState
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 @Composable
@@ -34,6 +35,7 @@ fun PermissionScreen(
     detectionMessage: String,
     detectionSettings: YellowDetectionSettings,
     cropOcrStates: Map<Int, CropOcrState>,
+    cropTranslationStates: Map<Int, CropTranslationState>,
     onRequestOverlayPermission: () -> Unit,
     onRequestScreenCapturePermission: () -> Unit,
     onLoadScreenshot: () -> Unit,
@@ -85,7 +87,8 @@ fun PermissionScreen(
         detectionResult?.let { result ->
             DetectionImages(
                 result = result,
-                cropOcrStates = cropOcrStates
+                cropOcrStates = cropOcrStates,
+                cropTranslationStates = cropTranslationStates
             )
         }
     }
@@ -94,7 +97,8 @@ fun PermissionScreen(
 @Composable
 private fun DetectionImages(
     result: DetectionResult,
-    cropOcrStates: Map<Int, CropOcrState>
+    cropOcrStates: Map<Int, CropOcrState>,
+    cropTranslationStates: Map<Int, CropTranslationState>
 ) {
     Text(text = "Detected area crops")
     if (result.crops.isEmpty()) {
@@ -131,6 +135,15 @@ private fun DetectionImages(
             }
             ocrState?.errorMessage?.let { message ->
                 Text(text = "Error: $message")
+            }
+            val translationState = cropTranslationStates[index]
+            Text(text = "Translation:")
+            Text(text = translationState?.text ?: "Translation pending...")
+            if (translationState?.wasReused == true) {
+                Text(text = "Translation reused")
+            }
+            translationState?.errorMessage?.let { message ->
+                Text(text = "Translation error: $message")
             }
         }
     }
@@ -264,6 +277,7 @@ fun PermissionScreenPreview() {
             detectionMessage = "Load a screenshot to test yellow box detection.",
             detectionSettings = YellowDetectionSettings(),
             cropOcrStates = emptyMap(),
+            cropTranslationStates = emptyMap(),
             onRequestOverlayPermission = {},
             onRequestScreenCapturePermission = {},
             onLoadScreenshot = {},
