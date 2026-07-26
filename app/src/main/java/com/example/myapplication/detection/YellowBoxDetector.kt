@@ -82,8 +82,19 @@ object YellowBoxDetector {
         Utils.matToBitmap(mask, maskBitmap)
 
         val crops = boxes.mapNotNull { rect ->
-            bitmap.cropSafely(rect)?.let { croppedBitmap ->
-                YellowBoxCrop(rect = rect, bitmap = croppedBitmap)
+            val cropRect = rect.expand(
+                paddingX = settings.cropPaddingX,
+                paddingY = settings.cropPaddingY,
+                maxWidth = bitmap.width,
+                maxHeight = bitmap.height
+            )
+            bitmap.cropSafely(cropRect)?.let { croppedBitmap ->
+                YellowBoxCrop(
+                    rect = rect,
+                    cropRect = cropRect,
+                    bitmap = croppedBitmap,
+                    ocrBitmap = croppedBitmap.scaleForOcr(settings.ocrScale)
+                )
             }
         }
 
@@ -116,5 +127,30 @@ object YellowBoxDetector {
         } else {
             null
         }
+    }
+
+    private fun Rect.expand(
+        paddingX: Int,
+        paddingY: Int,
+        maxWidth: Int,
+        maxHeight: Int
+    ): Rect {
+        val left = (x - paddingX).coerceAtLeast(0)
+        val top = (y - paddingY).coerceAtLeast(0)
+        val right = (x + width + paddingX).coerceAtMost(maxWidth)
+        val bottom = (y + height + paddingY).coerceAtMost(maxHeight)
+        return Rect(left, top, right - left, bottom - top)
+    }
+
+    private fun Bitmap.scaleForOcr(scale: Double): Bitmap {
+        if (scale <= 1.0) return this
+        val scaledWidth = (width * scale).toInt().coerceAtLeast(1)
+        val scaledHeight = (height * scale).toInt().coerceAtLeast(1)
+        return Bitmap.createScaledBitmap(
+            this,
+            scaledWidth,
+            scaledHeight,
+            true
+        )
     }
 }

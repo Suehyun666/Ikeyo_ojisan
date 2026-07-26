@@ -204,7 +204,7 @@ class MainActivity : ComponentActivity() {
 
         result.crops.forEachIndexed { index, crop ->
             ocrProcessor.recognize(
-                bitmap = crop.bitmap,
+                bitmap = crop.ocrBitmap,
                 onSuccess = { text ->
                     cropOcrStates = cropOcrStates + (
                         index to if (text.isBlank()) CropOcrState.Empty else CropOcrState(text)

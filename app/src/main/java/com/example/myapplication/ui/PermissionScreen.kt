@@ -104,7 +104,12 @@ private fun DetectionImages(
                 text = "Crop ${index + 1}: x=${crop.rect.x}, y=${crop.rect.y}, " +
                     "w=${crop.rect.width}, h=${crop.rect.height}"
             )
+            Text(
+                text = "OCR crop: x=${crop.cropRect.x}, y=${crop.cropRect.y}, " +
+                    "w=${crop.cropRect.width}, h=${crop.cropRect.height}"
+            )
             Text(text = "Size: ${crop.bitmap.width} x ${crop.bitmap.height}")
+            Text(text = "OCR input: ${crop.ocrBitmap.width} x ${crop.ocrBitmap.height}")
             Image(
                 bitmap = crop.bitmap.asImageBitmap(),
                 contentDescription = "Detected yellow area crop ${index + 1}",
@@ -190,6 +195,24 @@ private fun DetectionTuningControls(
         value = settings.minAspectRatio.toFloat(),
         valueRange = 1f..8f,
         onValueChange = { onSettingsChanged(settings.copy(minAspectRatio = it.toDouble())) }
+    )
+    TuningSlider(
+        label = "Pad X",
+        value = settings.cropPaddingX.toFloat(),
+        valueRange = 0f..80f,
+        onValueChange = { onSettingsChanged(settings.copy(cropPaddingX = it.toInt())) }
+    )
+    TuningSlider(
+        label = "Pad Y",
+        value = settings.cropPaddingY.toFloat(),
+        valueRange = 0f..60f,
+        onValueChange = { onSettingsChanged(settings.copy(cropPaddingY = it.toInt())) }
+    )
+    TuningSlider(
+        label = "OCR scale",
+        value = settings.ocrScale.toFloat(),
+        valueRange = 1f..4f,
+        onValueChange = { onSettingsChanged(settings.copy(ocrScale = it.toDouble())) }
     )
 }
 

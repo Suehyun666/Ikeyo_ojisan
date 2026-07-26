@@ -20,7 +20,12 @@ class JapaneseOcrProcessor {
 
         recognizer.process(inputImage)
             .addOnSuccessListener { result ->
-                val text = result.text.trim()
+                val text = result.textBlocks
+                    .flatMap { block -> block.lines }
+                    .map { line -> line.text.trim() }
+                    .filter { line -> line.containsJapaneseText() }
+                    .joinToString(separator = "\n")
+                    .trim()
                 Log.d(TAG, "OCR result: $text")
                 onSuccess(text)
             }
@@ -32,6 +37,17 @@ class JapaneseOcrProcessor {
 
     fun close() {
         recognizer.close()
+    }
+
+    private fun String.containsJapaneseText(): Boolean {
+        return any { char ->
+            val block = Character.UnicodeBlock.of(char)
+            block == Character.UnicodeBlock.HIRAGANA ||
+                block == Character.UnicodeBlock.KATAKANA ||
+                block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS ||
+                block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A ||
+                block == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION
+        }
     }
 
     private companion object {
