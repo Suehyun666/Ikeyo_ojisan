@@ -1,7 +1,7 @@
 package com.example.myapplication.ocr
 
 object TitleChangeDetector {
-    const val DEFAULT_SIMILARITY_THRESHOLD = 0.85
+    const val DEFAULT_SIMILARITY_THRESHOLD = 0.75
 
     fun normalize(text: String): String {
         return text.trim().replace("\\s+".toRegex(), "")

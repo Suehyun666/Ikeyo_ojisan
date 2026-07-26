@@ -65,6 +65,9 @@ class ReelsOverlayCaptureService : Service() {
     private var overlayParams: WindowManager.LayoutParams? = null
     private var previousNormalizedTitle: String? = null
     private var previousTranslation: String? = null
+    private var pendingNormalizedTitle: String? = null
+    private var pendingSourceText: String? = null
+    private var pendingHitCount = 0
     private var processingFrame = false
     private var runningFrameLoop = false
 
@@ -342,14 +345,18 @@ class ReelsOverlayCaptureService : Service() {
                 when (comparison.decision) {
                     TitleDecision.FirstTitle,
                     TitleDecision.NewTitle -> {
-                        previousNormalizedTitle = comparison.normalizedText
-                        translateTitle(text)
+                        handlePotentialNewTitle(
+                            sourceText = text,
+                            normalizedText = comparison.normalizedText
+                        )
                     }
                     TitleDecision.SameTitle -> {
+                        clearPendingTitle()
                         previousTranslation?.let(::updateSubtitle)
                         processingFrame = false
                     }
                     TitleDecision.Unknown -> {
+                        clearPendingTitle()
                         processingFrame = false
                     }
                 }
@@ -359,6 +366,43 @@ class ReelsOverlayCaptureService : Service() {
                 processingFrame = false
             }
         )
+    }
+
+    private fun handlePotentialNewTitle(
+        sourceText: String,
+        normalizedText: String
+    ) {
+        val pending = pendingNormalizedTitle
+        val isSamePending = pending != null &&
+            TitleChangeDetector.compare(
+                previousNormalizedText = pending,
+                currentText = sourceText,
+                threshold = PENDING_SIMILARITY_THRESHOLD
+            ).decision == TitleDecision.SameTitle
+
+        if (isSamePending) {
+            pendingHitCount += 1
+            pendingSourceText = sourceText
+        } else {
+            pendingNormalizedTitle = normalizedText
+            pendingSourceText = sourceText
+            pendingHitCount = 1
+        }
+
+        if (pendingHitCount >= REQUIRED_PENDING_HITS) {
+            previousNormalizedTitle = pendingNormalizedTitle
+            val titleToTranslate = pendingSourceText.orEmpty()
+            clearPendingTitle()
+            translateTitle(titleToTranslate)
+        } else {
+            processingFrame = false
+        }
+    }
+
+    private fun clearPendingTitle() {
+        pendingNormalizedTitle = null
+        pendingSourceText = null
+        pendingHitCount = 0
     }
 
     private fun translateTitle(sourceText: String) {
@@ -513,5 +557,7 @@ class ReelsOverlayCaptureService : Service() {
         private const val NOTIFICATION_CHANNEL_ID = "reels_overlay_capture"
         private const val NOTIFICATION_ID = 1001
         private const val FRAME_INTERVAL_MILLIS = 1_000L
+        private const val REQUIRED_PENDING_HITS = 2
+        private const val PENDING_SIMILARITY_THRESHOLD = 0.75
     }
 }
