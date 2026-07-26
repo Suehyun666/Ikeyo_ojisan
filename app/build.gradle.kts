@@ -1,6 +1,19 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use(::load)
+    }
+}
+
+fun localProperty(name: String): String {
+    return localProperties.getProperty(name, "")
 }
 
 android {
@@ -19,6 +32,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "PAPAGO_CLIENT_ID", "\"${localProperty("papago.client.id")}\"")
+        buildConfigField("String", "PAPAGO_CLIENT_SECRET", "\"${localProperty("papago.client.secret")}\"")
     }
 
     buildTypes {
@@ -34,6 +49,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -47,7 +63,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.mlkit.text.recognition.japanese)
-    implementation(libs.mlkit.translate)
     implementation(libs.opencv)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
