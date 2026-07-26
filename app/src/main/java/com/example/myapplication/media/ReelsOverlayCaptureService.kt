@@ -32,6 +32,14 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.example.myapplication.R
+import com.example.myapplication.detection.DetectionResult
+import com.example.myapplication.detection.YellowBoxCrop
+import com.example.myapplication.detection.YellowBoxDetector
+import com.example.myapplication.detection.YellowDetectionSettings
+import com.example.myapplication.ocr.JapaneseOcrProcessor
+import com.example.myapplication.ocr.TitleChangeDetector
+import com.example.myapplication.ocr.TitleDecision
+import com.example.myapplication.translation.JapaneseKoreanTranslator
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -40,6 +48,9 @@ import java.util.Locale
 
 class ReelsOverlayCaptureService : Service() {
     private val mainHandler = Handler()
+    private val detectionSettings = YellowDetectionSettings()
+    private val ocrProcessor = JapaneseOcrProcessor()
+    private val translator = JapaneseKoreanTranslator()
 
     private var mediaProjection: MediaProjection? = null
     private var projectionCallback: MediaProjection.Callback? = null
@@ -52,6 +63,18 @@ class ReelsOverlayCaptureService : Service() {
     private var overlayView: View? = null
     private var subtitleView: TextView? = null
     private var overlayParams: WindowManager.LayoutParams? = null
+    private var previousNormalizedTitle: String? = null
+    private var previousTranslation: String? = null
+    private var processingFrame = false
+    private var runningFrameLoop = false
+
+    private val frameRunnable = object : Runnable {
+        override fun run() {
+            if (!runningFrameLoop) return
+            processLatestFrame()
+            captureHandler?.postDelayed(this, FRAME_INTERVAL_MILLIS)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -69,8 +92,11 @@ class ReelsOverlayCaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        stopFrameLoop()
         removeOverlay()
         releaseCapture()
+        ocrProcessor.close()
+        translator.close()
         super.onDestroy()
     }
 
@@ -115,7 +141,8 @@ class ReelsOverlayCaptureService : Service() {
         mediaProjection!!.registerCallback(projectionCallback!!, captureHandler)
 
         createVirtualDisplay()
-        updateStatus("Drag subtitle to move. Tap STOP to close.")
+        updateSubtitle("번역 자막 준비 중")
+        startFrameLoop()
     }
 
     private fun createVirtualDisplay() {
@@ -235,6 +262,122 @@ class ReelsOverlayCaptureService : Service() {
         }
     }
 
+    private fun startFrameLoop() {
+        if (runningFrameLoop) return
+        runningFrameLoop = true
+        captureHandler?.post(frameRunnable)
+    }
+
+    private fun stopFrameLoop() {
+        runningFrameLoop = false
+        captureHandler?.removeCallbacks(frameRunnable)
+    }
+
+    private fun processLatestFrame() {
+        if (processingFrame) return
+        val reader = imageReader ?: return
+        val image = reader.acquireLatestImage() ?: return
+        processingFrame = true
+
+        image.use {
+            val bitmap = it.toBitmap()
+            try {
+                val result = YellowBoxDetector.detectYellowBoxes(bitmap, detectionSettings)
+                val crop = result.bestCrop()
+                if (crop == null) {
+                    recycleDetectionResult(result, keepCrop = null)
+                    processingFrame = false
+                    return
+                }
+                recycleDetectionResult(result, keepCrop = crop)
+                recognizeAndTranslate(crop)
+            } catch (error: Throwable) {
+                updateSubtitle("자막 처리 실패")
+                processingFrame = false
+            } finally {
+                bitmap.recycle()
+            }
+        }
+    }
+
+    private fun DetectionResult.bestCrop(): YellowBoxCrop? {
+        return crops.maxByOrNull { crop -> crop.rect.width * crop.rect.height }
+    }
+
+    private fun recycleDetectionResult(
+        result: DetectionResult,
+        keepCrop: YellowBoxCrop?
+    ) {
+        result.debugBitmap.recycle()
+        result.maskBitmap.recycle()
+        result.crops.forEach { crop ->
+            if (crop !== keepCrop) {
+                crop.bitmap.recycle()
+                if (crop.ocrBitmap !== crop.bitmap) {
+                    crop.ocrBitmap.recycle()
+                }
+            } else {
+                if (crop.ocrBitmap !== crop.bitmap) {
+                    crop.bitmap.recycle()
+                }
+            }
+        }
+    }
+
+    private fun recognizeAndTranslate(crop: YellowBoxCrop) {
+        ocrProcessor.recognize(
+            bitmap = crop.ocrBitmap,
+            onSuccess = { text ->
+                crop.ocrBitmap.recycle()
+                if (text.isBlank()) {
+                    processingFrame = false
+                    return@recognize
+                }
+
+                val comparison = TitleChangeDetector.compare(
+                    previousNormalizedText = previousNormalizedTitle,
+                    currentText = text
+                )
+
+                when (comparison.decision) {
+                    TitleDecision.FirstTitle,
+                    TitleDecision.NewTitle -> {
+                        previousNormalizedTitle = comparison.normalizedText
+                        translateTitle(text)
+                    }
+                    TitleDecision.SameTitle -> {
+                        previousTranslation?.let(::updateSubtitle)
+                        processingFrame = false
+                    }
+                    TitleDecision.Unknown -> {
+                        processingFrame = false
+                    }
+                }
+            },
+            onFailure = {
+                crop.ocrBitmap.recycle()
+                processingFrame = false
+            }
+        )
+    }
+
+    private fun translateTitle(sourceText: String) {
+        translator.translate(
+            text = sourceText,
+            onSuccess = { translatedText ->
+                if (translatedText.isNotBlank()) {
+                    previousTranslation = translatedText
+                    updateSubtitle(translatedText)
+                }
+                processingFrame = false
+            },
+            onFailure = {
+                updateSubtitle(sourceText)
+                processingFrame = false
+            }
+        )
+    }
+
     private fun Image.toBitmap(): Bitmap {
         val plane = planes[0]
         val buffer = plane.buffer
@@ -285,6 +428,12 @@ class ReelsOverlayCaptureService : Service() {
 
     private fun updateStatus(message: String) {
         // Status is kept in the notification/app screen for the release overlay.
+    }
+
+    private fun updateSubtitle(message: String) {
+        mainHandler.post {
+            subtitleView?.text = message
+        }
     }
 
     private fun removeOverlay() {
@@ -363,5 +512,6 @@ class ReelsOverlayCaptureService : Service() {
 
         private const val NOTIFICATION_CHANNEL_ID = "reels_overlay_capture"
         private const val NOTIFICATION_ID = 1001
+        private const val FRAME_INTERVAL_MILLIS = 1_000L
     }
 }
