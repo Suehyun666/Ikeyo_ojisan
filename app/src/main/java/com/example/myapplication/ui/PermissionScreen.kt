@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.detection.DetectionResult
 import com.example.myapplication.detection.YellowDetectionSettings
+import com.example.myapplication.ocr.CropOcrState
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 @Composable
@@ -31,6 +32,7 @@ fun PermissionScreen(
     detectionResult: DetectionResult?,
     detectionMessage: String,
     detectionSettings: YellowDetectionSettings,
+    cropOcrStates: Map<Int, CropOcrState>,
     onRequestOverlayPermission: () -> Unit,
     onRequestScreenCapturePermission: () -> Unit,
     onLoadScreenshot: () -> Unit,
@@ -80,13 +82,19 @@ fun PermissionScreen(
             onSettingsChanged = onDetectionSettingsChanged
         )
         detectionResult?.let { result ->
-            DetectionImages(result = result)
+            DetectionImages(
+                result = result,
+                cropOcrStates = cropOcrStates
+            )
         }
     }
 }
 
 @Composable
-private fun DetectionImages(result: DetectionResult) {
+private fun DetectionImages(
+    result: DetectionResult,
+    cropOcrStates: Map<Int, CropOcrState>
+) {
     Text(text = "Detected area crops")
     if (result.crops.isEmpty()) {
         Text(text = "No crop available.")
@@ -96,12 +104,19 @@ private fun DetectionImages(result: DetectionResult) {
                 text = "Crop ${index + 1}: x=${crop.rect.x}, y=${crop.rect.y}, " +
                     "w=${crop.rect.width}, h=${crop.rect.height}"
             )
+            Text(text = "Size: ${crop.bitmap.width} x ${crop.bitmap.height}")
             Image(
                 bitmap = crop.bitmap.asImageBitmap(),
                 contentDescription = "Detected yellow area crop ${index + 1}",
                 modifier = Modifier.fillMaxWidth(),
                 contentScale = ContentScale.FillWidth
             )
+            val ocrState = cropOcrStates[index]
+            Text(text = "OCR:")
+            Text(text = ocrState?.text ?: "OCR pending...")
+            ocrState?.errorMessage?.let { message ->
+                Text(text = "Error: $message")
+            }
         }
     }
 
@@ -206,6 +221,7 @@ fun PermissionScreenPreview() {
             detectionResult = null,
             detectionMessage = "Load a screenshot to test yellow box detection.",
             detectionSettings = YellowDetectionSettings(),
+            cropOcrStates = emptyMap(),
             onRequestOverlayPermission = {},
             onRequestScreenCapturePermission = {},
             onLoadScreenshot = {},

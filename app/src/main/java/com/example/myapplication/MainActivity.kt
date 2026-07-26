@@ -28,11 +28,15 @@ import com.example.myapplication.detection.DetectionResult
 import com.example.myapplication.detection.YellowBoxDetector
 import com.example.myapplication.detection.YellowDetectionSettings
 import com.example.myapplication.media.ReelsOverlayCaptureService
+import com.example.myapplication.ocr.CropOcrState
+import com.example.myapplication.ocr.JapaneseOcrProcessor
 import com.example.myapplication.ui.PermissionScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import org.opencv.android.OpenCVLoader
 
 class MainActivity : ComponentActivity() {
+    private val ocrProcessor = JapaneseOcrProcessor()
+
     private var canDrawOverlays by mutableStateOf(false)
     private var screenCaptureGranted by mutableStateOf(false)
     private var statusMessage by mutableStateOf("Check permissions.")
@@ -42,6 +46,7 @@ class MainActivity : ComponentActivity() {
     private var detectionMessage by mutableStateOf("Load a screenshot to test yellow box detection.")
     private var selectedBitmap by mutableStateOf<Bitmap?>(null)
     private var detectionSettings by mutableStateOf(YellowDetectionSettings())
+    private var cropOcrStates by mutableStateOf<Map<Int, CropOcrState>>(emptyMap())
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -95,6 +100,7 @@ class MainActivity : ComponentActivity() {
                         detectionResult = detectionResult,
                         detectionMessage = detectionMessage,
                         detectionSettings = detectionSettings,
+                        cropOcrStates = cropOcrStates,
                         onRequestOverlayPermission = ::requestOverlayPermission,
                         onRequestScreenCapturePermission = ::requestScreenCapturePermission,
                         onLoadScreenshot = ::loadScreenshot,
@@ -104,6 +110,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        ocrProcessor.close()
+        super.onDestroy()
     }
 
     override fun onResume() {
@@ -175,6 +186,7 @@ class MainActivity : ComponentActivity() {
         selectedBitmap = bitmap
         detectionResult = YellowBoxDetector.detectYellowBoxes(bitmap, detectionSettings)
         detectionMessage = buildDetectionMessage(detectionResult!!)
+        runOcrForCrops(detectionResult!!)
     }
 
     private fun updateDetectionSettings(settings: YellowDetectionSettings) {
@@ -182,6 +194,31 @@ class MainActivity : ComponentActivity() {
         selectedBitmap?.let { bitmap ->
             detectionResult = YellowBoxDetector.detectYellowBoxes(bitmap, detectionSettings)
             detectionMessage = buildDetectionMessage(detectionResult!!)
+            runOcrForCrops(detectionResult!!)
+        }
+    }
+
+    private fun runOcrForCrops(result: DetectionResult) {
+        cropOcrStates = result.crops.indices.associateWith { CropOcrState.Loading }
+        if (result.crops.isEmpty()) return
+
+        result.crops.forEachIndexed { index, crop ->
+            ocrProcessor.recognize(
+                bitmap = crop.bitmap,
+                onSuccess = { text ->
+                    cropOcrStates = cropOcrStates + (
+                        index to if (text.isBlank()) CropOcrState.Empty else CropOcrState(text)
+                        )
+                },
+                onFailure = { error ->
+                    cropOcrStates = cropOcrStates + (
+                        index to CropOcrState(
+                            text = "OCR failed",
+                            errorMessage = error.message
+                        )
+                        )
+                }
+            )
         }
     }
 

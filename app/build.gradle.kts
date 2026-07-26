@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.mlkit.text.recognition.japanese)
     implementation(libs.opencv)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
