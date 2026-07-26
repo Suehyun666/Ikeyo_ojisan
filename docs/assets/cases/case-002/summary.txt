@@ -1,0 +1,29 @@
+Session: case_20260727_001318
+
+Detection settings
+lowerHue=24.3
+upperHue=78.368408203125
+lowerSaturation=28.5
+lowerValue=161.4
+minWidth=880
+minHeight=50
+minAspectRatio=1.5
+cropPaddingX=24
+cropPaddingY=12
+ocrScale=1.7
+
+Detected crops: 1
+
+Crop 1
+rect=x=0, y=1109, w=1080, h=202
+ocrCrop=x=0, y=1097, w=1080, h=226
+cropSize=1080x226
+ocrInputSize=1836x384
+ocrText=週5で同じラーメン屋に
+通うと心に決めだ瞬間
+normalized=週5で同じラーメン屋に通うと心に決めだ瞬間
+decision=NewTitle
+similarity=0.0
+translation=주 5일 같은 라멘 가게에
+다니기로 마음을 굳힌 순간
+translationReused=false

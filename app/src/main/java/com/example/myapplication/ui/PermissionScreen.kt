@@ -39,9 +39,11 @@ fun PermissionScreen(
     detectionSettings: YellowDetectionSettings,
     cropOcrStates: Map<Int, CropOcrState>,
     cropTranslationStates: Map<Int, CropTranslationState>,
+    saveResultMessage: String,
     onRequestOverlayPermission: () -> Unit,
     onRequestScreenCapturePermission: () -> Unit,
     onLoadScreenshot: () -> Unit,
+    onSaveResultArtifacts: () -> Unit,
     onDetectionSettingsChanged: (YellowDetectionSettings) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -84,6 +86,13 @@ fun PermissionScreen(
         ) {
             Text(text = "Load screenshot")
         }
+        Button(
+            onClick = onSaveResultArtifacts,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = "Save result artifacts")
+        }
+        Text(text = saveResultMessage)
         Text(text = detectionMessage)
         DetectionTuningControls(
             settings = detectionSettings,
@@ -293,9 +302,11 @@ fun PermissionScreenPreview() {
             detectionSettings = YellowDetectionSettings(),
             cropOcrStates = emptyMap(),
             cropTranslationStates = emptyMap(),
+            saveResultMessage = "No saved result yet.",
             onRequestOverlayPermission = {},
             onRequestScreenCapturePermission = {},
             onLoadScreenshot = {},
+            onSaveResultArtifacts = {},
             onDetectionSettingsChanged = {}
         )
     }

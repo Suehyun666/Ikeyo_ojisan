@@ -1,0 +1,29 @@
+Session: case_20260727_002333
+
+Detection settings
+lowerHue=24.3
+upperHue=77.6
+lowerSaturation=28.5
+lowerValue=161.4
+minWidth=880
+minHeight=50
+minAspectRatio=1.5
+cropPaddingX=24
+cropPaddingY=12
+ocrScale=1.7
+
+Detected crops: 1
+
+Crop 1
+rect=x=0, y=1108, w=1080, h=203
+ocrCrop=x=0, y=1096, w=1080, h=227
+cropSize=1080x227
+ocrInputSize=1836x385
+ocrText=もう無チャンスと思った瞬間
+身作が勝手 動きしてました
+normalized=もう無チャンスと思った瞬間身作が勝手動きしてました
+decision=FirstTitle
+similarity=-
+translation=더 이상 기회가 없다고 생각한 순간
+몸이 저절로 움직이고 있었어요
+translationReused=false

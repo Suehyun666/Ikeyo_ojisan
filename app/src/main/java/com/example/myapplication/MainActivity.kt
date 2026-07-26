@@ -32,6 +32,7 @@ import com.example.myapplication.ocr.CropOcrState
 import com.example.myapplication.ocr.JapaneseOcrProcessor
 import com.example.myapplication.ocr.TitleChangeDetector
 import com.example.myapplication.ocr.TitleDecision
+import com.example.myapplication.storage.ResultArtifactSaver
 import com.example.myapplication.translation.CropTranslationState
 import com.example.myapplication.translation.JapaneseKoreanTranslator
 import com.example.myapplication.ui.PermissionScreen
@@ -41,6 +42,7 @@ import org.opencv.android.OpenCVLoader
 class MainActivity : ComponentActivity() {
     private val ocrProcessor = JapaneseOcrProcessor()
     private val translator = JapaneseKoreanTranslator()
+    private val resultArtifactSaver by lazy { ResultArtifactSaver(this) }
 
     private var canDrawOverlays by mutableStateOf(false)
     private var screenCaptureGranted by mutableStateOf(false)
@@ -53,6 +55,7 @@ class MainActivity : ComponentActivity() {
     private var detectionSettings by mutableStateOf(YellowDetectionSettings())
     private var cropOcrStates by mutableStateOf<Map<Int, CropOcrState>>(emptyMap())
     private var cropTranslationStates by mutableStateOf<Map<Int, CropTranslationState>>(emptyMap())
+    private var saveResultMessage by mutableStateOf("No saved result yet.")
     private var previousNormalizedTitle: String? = null
     private var previousTranslation: String? = null
 
@@ -110,9 +113,11 @@ class MainActivity : ComponentActivity() {
                         detectionSettings = detectionSettings,
                         cropOcrStates = cropOcrStates,
                         cropTranslationStates = cropTranslationStates,
+                        saveResultMessage = saveResultMessage,
                         onRequestOverlayPermission = ::requestOverlayPermission,
                         onRequestScreenCapturePermission = ::requestScreenCapturePermission,
                         onLoadScreenshot = ::loadScreenshot,
+                        onSaveResultArtifacts = ::saveResultArtifacts,
                         onDetectionSettingsChanged = ::updateDetectionSettings,
                         modifier = Modifier.padding(innerPadding)
                     )
@@ -305,6 +310,36 @@ class MainActivity : ComponentActivity() {
                     )
             }
         )
+    }
+
+    private fun saveResultArtifacts() {
+        val bitmap = selectedBitmap
+        val result = detectionResult
+        if (bitmap == null || result == null) {
+            saveResultMessage = "Load and detect a screenshot first."
+            return
+        }
+
+        saveResultMessage = "Saving result artifacts..."
+        Thread {
+            try {
+                val saveResult = resultArtifactSaver.save(
+                    originalBitmap = bitmap,
+                    detectionResult = result,
+                    detectionSettings = detectionSettings,
+                    cropOcrStates = cropOcrStates,
+                    cropTranslationStates = cropTranslationStates
+                )
+                runOnUiThread {
+                    saveResultMessage =
+                        "Saved ${saveResult.imageCount} images and summary: ${saveResult.sessionName}"
+                }
+            } catch (error: Throwable) {
+                runOnUiThread {
+                    saveResultMessage = "Save failed: ${error.message}"
+                }
+            }
+        }.start()
     }
 
     @Suppress("DEPRECATION")
